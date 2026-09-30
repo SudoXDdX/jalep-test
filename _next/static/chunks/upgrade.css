@@ -1,0 +1,480 @@
+/* ═══════════════════════════════════════════════════════════════════
+   JALEP GLASS — Apple Liquid Glass v3 (ACTUALLY VISIBLE)
+   Based on: stormaref/LiquidGlassSkill, iOS 26 Liquid Glass design,
+   SwiftWebUI concepts, Na2H2P2O7/liquid-glass-skill (WebGL refraction)
+   KEY FIX: Dark body background + INTENSE ambient mesh + HIGH blur values
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Protect Material Symbols ── */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined" !important;
+  font-style: normal !important;
+  font-weight: normal !important;
+}
+
+/* ══════════════════════════════════════
+   TOKEN SYSTEM — Liquid Glass (INTENSIFIED)
+   ══════════════════════════════════════ */
+:root {
+  /* Geometry */
+  --glass-radius: 20px;
+  --glass-radius-lg: 28px;
+  --glass-radius-full: 9999px;
+
+  /* Motion */
+  --glass-duration: 200ms;
+  --glass-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --glass-ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Dark theme — CRITICAL for glass visibility */
+  --glass-tint-top: rgba(255, 255, 255, 0.12);
+  --glass-tint-bottom: rgba(179, 179, 179, 0.08);
+  --glass-tint-top-hover: rgba(255, 255, 255, 0.18);
+  --glass-tint-bottom-hover: rgba(179, 179, 179, 0.14);
+  --glass-rim-top: rgba(255, 255, 255, 0.60);
+  --glass-rim-hairline: rgba(255, 255, 255, 0.18);
+  --glass-rim-bottom: rgba(255, 255, 255, 0.10);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 20px 48px rgba(0, 0, 0, 0.40);
+
+  /* Menu tier */
+  --glass-menu-surface: #16161b;
+  --glass-menu-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+
+  /* Page surfaces — DEEP dark (NEVER #000, but very dark) */
+  --glass-page-bg: #0a0a0f;
+  --glass-page-fg: #ededf0;
+
+  /* Ambient mesh — MAXIMUM INTENSITY for visible refraction */
+  --glass-mesh-violet: rgba(139, 92, 246, 0.65);
+  --glass-mesh-pink: rgba(236, 72, 153, 0.55);
+  --glass-mesh-cyan: rgba(6, 182, 212, 0.50);
+  --glass-mesh-green: rgba(52, 211, 153, 0.35);
+  --glass-mesh-corner-top: rgba(99, 102, 241, 0.45);
+  --glass-mesh-corner-bottom: rgba(79, 70, 229, 0.55);
+
+  /* Three-triplet color system */
+  --primary: 90 200 250;
+  --primary-soft: 100 210 255;
+  --accent: 191 90 242;
+  --accent-2: 236 72 153;
+
+  /* Masonry */
+  --masonry-gap: 1.5rem;
+}
+
+/* ══════════════════════════════════════
+   CRITICAL: Force DARK body background
+   Glass is INVISIBLE on light backgrounds!
+   ══════════════════════════════════════ */
+body {
+  background: var(--glass-page-bg) !important;
+  color: var(--glass-page-fg) !important;
+}
+
+/* ══════════════════════════════════════
+   AMBIENT BACKDROP — Colorful mesh that glass refracts
+   (stormaref Rule #1: Glass NEEDS a backdrop to be visible)
+   INTENSIFIED with MORE blobs and higher opacity
+   ══════════════════════════════════════ */
+body::before {
+  content: '' !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  background:
+    radial-gradient(50rem 40rem at 35% 30%, var(--glass-mesh-violet), transparent 55%),
+    radial-gradient(45rem 38rem at 65% 45%, var(--glass-mesh-pink), transparent 55%),
+    radial-gradient(48rem 42rem at 50% 70%, var(--glass-mesh-cyan), transparent 55%),
+    radial-gradient(40rem 30rem at 80% 25%, var(--glass-mesh-green), transparent 50%),
+    radial-gradient(70rem 50rem at 10% -5%, var(--glass-mesh-corner-top), transparent 55%),
+    radial-gradient(60rem 40rem at 95% 105%, var(--glass-mesh-corner-bottom), transparent 55%),
+    radial-gradient(30rem 25rem at 20% 80%, rgba(251, 146, 60, 0.30), transparent 50%),
+    radial-gradient(35rem 28rem at 75% 75%, rgba(168, 85, 247, 0.35), transparent 50%) !important;
+}
+
+/* ══════════════════════════════════════
+   GRAIN OVERLAY — Analog warmth, hides blur banding
+   ══════════════════════════════════════ */
+body::after {
+  content: "" !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9998 !important;
+  pointer-events: none !important;
+  opacity: 0.04 !important;
+  mix-blend-mode: overlay !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>") !important;
+}
+
+/* ══════════════════════════════════════
+   GLASS PANEL — The main card surface
+   HIGH blur (40px+) for VISIBLE frosted glass effect
+   ══════════════════════════════════════ */
+.glass-card {
+  position: relative !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  background: linear-gradient(180deg, var(--glass-tint-top), var(--glass-tint-bottom)) !important;
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-rim-top),
+    inset 0 0 0 1px var(--glass-rim-hairline),
+    inset 0 -1px 0 var(--glass-rim-bottom) !important;
+  backdrop-filter: blur(40px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  overflow: hidden !important;
+  transition:
+    transform var(--glass-duration) var(--glass-ease),
+    box-shadow var(--glass-duration) var(--glass-ease),
+    background var(--glass-duration) var(--glass-ease) !important;
+}
+
+.glass-card:hover {
+  background: linear-gradient(180deg, var(--glass-tint-top-hover), var(--glass-tint-bottom-hover)) !important;
+  transform: translateY(-2px) !important;
+  box-shadow:
+    0 24px 56px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 var(--glass-rim-bottom) !important;
+}
+
+/* ── Hover light sweep (cosmic-glass refraction) ── */
+.glass-card::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  background: linear-gradient(112deg, transparent 0%, rgba(255, 255, 255, 0.15) 36%, transparent 58%) !important;
+  transform: translateX(-72%) skewX(-16deg) !important;
+  transition: opacity 0.4s var(--glass-ease), transform 0.6s var(--glass-ease) !important;
+}
+
+.glass-card:hover::after {
+  opacity: 0.7 !important;
+  transform: translateX(80%) skewX(-16deg) !important;
+}
+
+/* ══════════════════════════════════════
+   NEON CARD — Premium glass with gradient hairline border
+   ══════════════════════════════════════ */
+.neon-card {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid var(--glass-border) !important;
+  border-top-color: rgba(255, 255, 255, 0.24) !important;
+  border-radius: var(--glass-radius-lg) !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03) 38%, rgba(255, 255, 255, 0.02)),
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.14), transparent 18rem),
+    rgba(7, 12, 26, 0.58) !important;
+  box-shadow:
+    0 24px 90px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(48px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(210%) !important;
+}
+
+.neon-card::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  border-radius: inherit !important;
+  padding: 1px !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.42), transparent 32%, rgb(var(--accent) / 0.18) 58%, rgb(var(--accent-2) / 0.20)),
+    radial-gradient(circle at 88% 8%, rgba(255, 255, 255, 0.22), transparent 8rem) !important;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  mask-composite: exclude !important;
+  -webkit-mask-composite: xor !important;
+  pointer-events: none !important;
+}
+
+/* ══════════════════════════════════════
+   NAVIGATION — Liquid Glass Bar (left-aligned for presentation)
+   ══════════════════════════════════════ */
+.nav-glass {
+  background: color-mix(in srgb, var(--glass-menu-surface) 60%, transparent) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+  backdrop-filter: blur(48px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(210%) !important;
+  box-shadow:
+    var(--glass-menu-shadow),
+    inset 0 1px 0 var(--glass-rim-top) !important;
+}
+
+.nav-glass.scrolled {
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.60),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 var(--glass-rim-top) !important;
+}
+
+.nav-glass-inner {
+  justify-content: flex-start !important;
+  padding-left: 0.75rem !important;
+}
+
+.nav-glass-inner > nav {
+  margin-left: 0.5rem !important;
+}
+
+/* ══════════════════════════════════════
+   FOOTER — Liquid Glass Panel
+   ══════════════════════════════════════ */
+.footer-glass {
+  background: color-mix(in srgb, var(--glass-menu-surface) 45%, transparent) !important;
+  border-top: 1px solid var(--glass-border) !important;
+  backdrop-filter: blur(36px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(200%) !important;
+}
+
+/* ══════════════════════════════════════
+   BUTTONS — Glass Capsules
+   ══════════════════════════════════════ */
+.btn-primary {
+  border-radius: var(--glass-radius-full) !important;
+  background: rgba(243, 238, 227, 0.10) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1px solid rgba(243, 238, 227, 0.22) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.10),
+    0 10px 30px -14px rgba(0, 0, 0, 0.5) !important;
+  color: var(--color-text) !important;
+  transition: all var(--glass-duration) var(--glass-ease) !important;
+}
+
+.btn-primary:hover {
+  background: rgba(243, 238, 227, 0.18) !important;
+  border-color: rgba(243, 238, 227, 0.42) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-ghost {
+  border-radius: var(--glass-radius-full) !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  color: var(--color-text-sec) !important;
+  transition: all var(--glass-duration) var(--glass-ease) !important;
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: var(--color-text) !important;
+}
+
+/* ══════════════════════════════════════
+   CHIP TIER — Glass pills
+   ══════════════════════════════════════ */
+.chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  padding: 0.22rem 0.6rem !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius-full) !important;
+  background: linear-gradient(180deg, var(--glass-tint-top), var(--glass-tint-bottom)) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim-top) !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+}
+
+/* ══════════════════════════════════════
+   TEAM AVATARS — Glass Orbs
+   ══════════════════════════════════════ */
+.w-20.h-20.rounded-full {
+  backdrop-filter: blur(22px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(190%) !important;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* ══════════════════════════════════════
+   HERO — Vibrant gradient text
+   ══════════════════════════════════════ */
+.hero-title {
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.3) !important;
+  letter-spacing: -0.025em !important;
+}
+
+.hero-gradient-text {
+  background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--accent)), rgb(var(--accent-2))) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.hero-tag {
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius-full) !important;
+  background: linear-gradient(180deg, var(--glass-tint-top), var(--glass-tint-bottom)) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim-top) !important;
+  backdrop-filter: blur(12px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(130%) !important;
+}
+
+/* ══════════════════════════════════════
+   SCROLL PROGRESS — Iridescent bar
+   ══════════════════════════════════════ */
+.scroll-progress-bar {
+  background: linear-gradient(90deg, rgb(var(--primary)), rgb(var(--accent)), rgb(var(--accent-2)), rgb(var(--primary))) !important;
+  height: 2px !important;
+}
+
+/* ══════════════════════════════════════
+   THEME TOGGLE — Glass Switch
+   ══════════════════════════════════════ */
+.theme-switch {
+  background: linear-gradient(180deg, var(--glass-tint-top), var(--glass-tint-bottom)) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--glass-radius-full) !important;
+  backdrop-filter: blur(12px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(130%) !important;
+  box-shadow: inset 0 1px 0 var(--glass-rim-top) !important;
+}
+
+/* ══════════════════════════════════════
+   SCROLL TO TOP — Glass FAB
+   ══════════════════════════════════════ */
+.scroll-to-top-btn {
+  background: linear-gradient(180deg, var(--glass-tint-top-hover), var(--glass-tint-bottom-hover)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 50% !important;
+  backdrop-filter: blur(22px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(190%) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 var(--glass-rim-top) !important;
+}
+
+/* ══════════════════════════════════════
+   TYPOGRAPHY — Liquid Glass style
+   ══════════════════════════════════════ */
+.section-title {
+  letter-spacing: -0.01em !important;
+  text-wrap: balance !important;
+}
+
+.section-kicker {
+  font-family: var(--font-mono) !important;
+  letter-spacing: 0.34em !important;
+  text-transform: uppercase !important;
+  color: rgb(var(--primary) / 0.7) !important;
+}
+
+/* Pedro annotation: "giselle gulosa, K" in small italic */
+.glass-card.p-6.h-full.flex.flex-col:nth-child(5) p.text-sm {
+  position: relative;
+}
+
+/* ══════════════════════════════════════
+   FLEXBOX MASONRY
+   ══════════════════════════════════════ */
+.grid.md\:grid-cols-2.lg\:grid-cols-3.gap-6.mb-16,
+.grid.lg\:grid-cols-3.gap-6.mb-16 {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: var(--masonry-gap) !important;
+  grid-template-columns: unset !important;
+}
+
+.grid.md\:grid-cols-2.lg\:grid-cols-3.gap-6.mb-16 > *,
+.grid.lg\:grid-cols-3.gap-6.mb-16 > * {
+  flex: 1 1 calc(33.333% - var(--masonry-gap)) !important;
+  min-width: 280px !important;
+  max-width: calc(33.333% + var(--masonry-gap)) !important;
+}
+
+.grid.md\:grid-cols-2.lg\:grid-cols-3.gap-6.mb-16 > *:nth-child(2),
+.grid.lg\:grid-cols-3.gap-6.mb-16 > *:nth-child(2) {
+  transform: translateY(1.2rem);
+}
+
+.grid.md\:grid-cols-2.lg\:grid-cols-3.gap-6.mb-16 > *:nth-child(5),
+.grid.lg\:grid-cols-3.gap-6.mb-16 > *:nth-child(5) {
+  transform: translateY(0.8rem);
+}
+
+.grid.grid-cols-2.md\:grid-cols-4.gap-3 {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.75rem !important;
+  grid-template-columns: unset !important;
+}
+
+.grid.grid-cols-2.md\:grid-cols-4.gap-3 > * {
+  flex: 1 1 calc(25% - 0.75rem) !important;
+  min-width: 140px !important;
+}
+
+.grid.sm\:grid-cols-3.gap-6 {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 1.5rem !important;
+  grid-template-columns: unset !important;
+}
+
+.grid.sm\:grid-cols-3.gap-6 > * {
+  flex: 1 1 calc(33.333% - 1.5rem) !important;
+  min-width: 200px !important;
+}
+
+footer .grid.gap-10.sm\:grid-cols-2.lg\:grid-cols-3 {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 2.5rem !important;
+  grid-template-columns: unset !important;
+}
+
+footer .grid.gap-10.sm\:grid-cols-2.lg\:grid-cols-3 > * {
+  flex: 1 1 calc(33.333% - 2.5rem) !important;
+  min-width: 220px !important;
+}
+
+/* ── Entrance animation ── */
+@keyframes glass-rise {
+  from { opacity: 0; transform: translateY(40px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.glass-card.p-6.h-full.flex.flex-col {
+  animation: glass-rise 0.6s var(--glass-ease) both !important;
+}
+
+.glass-card.p-6.h-full.flex.flex-col:nth-child(1) { animation-delay: 0.12s; }
+.glass-card.p-6.h-full.flex.flex-col:nth-child(2) { animation-delay: 0.22s; }
+.glass-card.p-6.h-full.flex.flex-col:nth-child(3) { animation-delay: 0.32s; }
+.glass-card.p-6.h-full.flex.flex-col:nth-child(4) { animation-delay: 0.42s; }
+.glass-card.p-6.h-full.flex.flex-col:nth-child(5) { animation-delay: 0.52s; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .grid.md\:grid-cols-2.lg\:grid-cols-3.gap-6.mb-16 > *,
+  .grid.lg\:grid-cols-3.gap-6.mb-16 > * {
+    flex: 1 1 calc(50% - var(--masonry-gap)) !important;
+    max-width: calc(50% + var(--masonry-gap)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid.md\:grid-cols-2.lg\:grid-cols-3.gap-6.mb-16 > *,
+  .grid.lg\:grid-cols-3.gap-6.mb-16 > * {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+  }
+  .grid.grid-cols-2.md\:grid-cols-4.gap-3 > * {
+    flex: 1 1 calc(50% - 0.75rem) !important;
+  }
+}

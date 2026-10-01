@@ -1,42 +1,46 @@
 # JALEP Test — MEMORY.md
 
-> **REGRA**: Toda vez que qualquer IA mexer neste repo, DEVE escrever aqui o que fez e ler o histórico anterior.
+## Purpose
+Sandbox for testing dangerous/experimental changes before applying to jalep-mano or jalep-glass.
 
-## Log Format
-```
-[YYYY-MM-DD HH:MM] AI_NAME — Ação realizada
-  - Detalhes da mudança
-  - Arquivos afetados
-  - Resultado/Status
-```
+## Sites
+- **jalep-mano** (Material Web): https://sudoxddx.github.io/jalep-mano/
+- **jalep-glass** (Liquid Glass): https://sudoxddx.github.io/jalep-glass/
+- **jalep-test** (Sandbox): https://sudoxddx.github.io/jalep-test/
 
-## Histórico
+## Current State (2026-10-01)
+- Both sites deployed and working
+- Blur reduced ~30% from previous values
+- Google Sans Flex font implemented (6-axis variable font)
+- André's card: "TI · Técnico · Security Researcher · Influencer"
+  - Bio includes CVE-2026-43499 (Ghost Lock), Root-My-Galaxy, bug bounty
+- Gender text REMOVED from Pedro's card (no more "giselle gulosa, K")
+- jalep-glass: REAL Liquid Glass with SVG feDisplacementMap refraction + chromatic aberration + Fresnel rim highlights + ambient mesh
 
-### 2026-09-30 — Criação
-- **Super Z** — Criou repo jalep-test e MEMORY.md
-  - Objetivo: Testes seguros SEM afetar jalep-mano e jalep-glass
-  - Este repo é para experimentar CSS, Liquid Glass, Blur, fontes, etc.
-  - **NUNCA** fazer deploy automático para os sites principais a partir daqui
+## Architecture
+- Static Next.js 16 export (output: "export") for GitHub Pages
+- basePath: /jalep-mano/ or /jalep-glass/
+- CSS override via upgrade.css (loaded after main CSS)
+- JS data in 2f96d62cb546de75.js (Turbopack RSC chunk)
 
----
+## Research Findings
+### Google Sans Flex
+- 6-axis variable font: opsz(6-144), wdth(25-151), wght(1-1000), GRAD(0-100), ROND(0-100), slnt(-10-0)
+- CDN: fonts.googleapis.com/css2?family=Google+Sans+Flex
+- npm: @fontsource/google-sans-flex
 
-## Sites Principais (NÃO MODIFICAR sem testar aqui primeiro)
-- **jalep-mano**: https://sudoxddx.github.io/jalep-mano/ (Material Web)
-- **jalep-glass**: https://sudoxddx.github.io/jalep-glass/ (Liquid Glass)
+### Liquid Glass Implementations
+1. **liquid-dom** (AndrewPrifer) — WebGPU, most advanced
+2. **archisvaze/liquid-glass** — SVG + WebGL, best demo
+3. **hyalite** (VII-Cae) — Pure SVG, no WebGL, folding technique
 
-## Stack Atual
-- Next.js 16 (static export → GitHub Pages)
-- Google Sans Flex (variable font, 6 axes)
-- JetBrains Mono (code/mono)
-- Material Symbols Outlined (icons)
-- Tailwind CSS v4
-- TypeScript 5.8+
+### Tool Recommendations
+- Runtime: Node.js 22 LTS (prod) + Bun (dev)
+- CSS: Tailwind CSS v4
+- PM: pnpm 10 (monorepo)
+- React: React 19 (for Next.js 16)
 
-## Melhorias Planejadas
-- [ ] Transformar de Static Build para /src project real
-- [ ] Adicionar Backend (API routes)
-- [ ] Bun como runtime (29x mais rápido que Node)
-- [ ] TypeScript 7.0 (Go port, 10x mais rápido)
-- [ ] Million.js (React 70% mais rápido)
-- [ ] Forks de todas as plataformas
-- [ ] Website Template (amanhã com .ZIPs)
+## Next Steps
+- [ ] Transform to /src project with Backend
+- [ ] Template-ize both sites
+- [ ] Consider hyalite.js for even better Liquid Glass
